@@ -1,0 +1,6 @@
+{
+  "name": "RIEMART.com",
+  "description": "High-end minimalist e-commerce and Atelier Control Room for RIEMART.COM with Category-Wise Automated Product Inventory Export and A4 Printing Systems",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

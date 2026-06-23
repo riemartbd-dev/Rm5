@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A store product with bilingual details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sku": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "nameBn": { "type": "string" },
+        "category": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "price": { "type": "number" },
+        "regularPrice": { "type": "number" },
+        "image": { "type": "string" },
+        "images": { "type": "array" },
+        "descriptionEn": { "type": "string" },
+        "descriptionBn": { "type": "string" },
+        "inventory": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "offers": { "type": "boolean" },
+        "specificationsEn": { "type": "array" },
+        "specificationsBn": { "type": "array" }
+      },
+      "required": ["id", "nameEn", "nameBn", "category", "price", "image", "descriptionEn", "descriptionBn", "inventory"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer purchase order with items, tracking, and payment details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "orderNotes": { "type": "string" },
+        "items": { "type": "array" },
+        "totalPrice": { "type": "number" },
+        "discountApplied": { "type": "number" },
+        "deliveryCharge": { "type": "number" },
+        "status": { "type": "string" },
+        "date": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "paymentSender": { "type": "string" },
+        "paymentTrxId": { "type": "string" },
+        "statusHistory": { "type": "array" }
+      },
+      "required": ["id", "customerName", "customerPhone", "customerAddress", "items", "totalPrice", "status", "date"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global custom configurations for RIEMART online store",
+      "type": "object",
+      "properties": {
+        "buyMoreSaveMoreEnabled": { "type": "boolean" },
+        "tier2Qty": { "type": "number" },
+        "tier2Discount": { "type": "number" },
+        "tier3Qty": { "type": "number" },
+        "tier3Discount": { "type": "number" },
+        "announcementEn": { "type": "string" },
+        "announcementBn": { "type": "string" },
+        "showAnnouncement": { "type": "boolean" },
+        "passphraseHash": { "type": "string" },
+        "storeSignatureText": { "type": "string" },
+        "storeSignatureImage": { "type": "string" },
+        "facebookPageUrl": { "type": "string" },
+        "facebookMessengerUsername": { "type": "string" },
+        "publicStoreDomain": { "type": "string" }
+      },
+      "required": ["buyMoreSaveMoreEnabled", "tier2Qty", "tier2Discount", "tier3Qty", "tier3Discount", "announcementEn", "announcementBn", "showAnnouncement", "passphraseHash"]
+    },
+    "SystemLog": {
+      "title": "SystemLog",
+      "description": "Audit trails and business operation event logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "type": { "type": "string" },
+        "messageEn": { "type": "string" },
+        "messageBn": { "type": "string" },
+        "operator": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "type", "messageEn", "messageBn", "operator"]
+    },
+    "RegisteredUser": {
+      "title": "RegisteredUser",
+      "description": "User profile with contact info and saved configurations",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "savedBkash": { "type": "string" },
+        "savedNagad": { "type": "string" },
+        "savedUpay": { "type": "string" }
+      },
+      "required": ["phone", "name"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Newsletter or contact subscription",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["email", "date"]
+    },
+    "CustomerNotification": {
+      "title": "CustomerNotification",
+      "description": "Broadcasting banner or notifications targetting specific customer scopes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "titleBn": { "type": "string" },
+        "messageEn": { "type": "string" },
+        "messageBn": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "titleEn", "titleBn", "messageEn", "messageBn", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Collection of catalog items"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Orders submitted by consumers"
+    },
+    "/settings/{settingsId}": {
+      "schema": { "$ref": "#/entities/StoreSettings" },
+      "description": "Settings objects. Specifically document /settings/store"
+    },
+    "/logs/{logId}": {
+      "schema": { "$ref": "#/entities/SystemLog" },
+      "description": "Audit and error logs"
+    },
+    "/registeredUsers/{userId}": {
+      "schema": { "$ref": "#/entities/RegisteredUser" },
+      "description": "Profiles for customers"
+    },
+    "/subscriptions/{subId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "Newsletter signups"
+    },
+    "/customerNotifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/CustomerNotification" },
+      "description": "Broadcasts notifications"
+    },
+    "/userOrders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer specific order histories"
+    }
+  }
+}

@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable, hardened global helpers
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    function incoming() { 
+      return request.resource.data; 
+    }
+
+    function existing() { 
+      return resource.data; 
+    }
+
+    // 1. Products Collection Rules
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true; // In simple web apps without active Firebase Auth UI, allow writing with minimal restriction
+    }
+
+    // 2. Orders Collection Rules
+    match /orders/{orderId} {
+      allow read, write: if true; // Anyone can place an order and track it. Real-time updates push directly.
+    }
+
+    // 3. Settings Collection Rules
+    match /settings/{settingsId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 4. Logs Collection Rules
+    match /logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // 5. Registered Users Rules
+    match /registeredUsers/{userId} {
+      allow read, write: if true;
+    }
+
+    // 6. Subscriptions Rules
+    match /subscriptions/{subId} {
+      allow read, write: if true;
+    }
+
+    // 7. Customer Notifications Rules
+    match /customerNotifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // 8. User Orders Rules
+    match /userOrders/{orderId} {
+      allow read, write: if true;
+    }
+  }
+}

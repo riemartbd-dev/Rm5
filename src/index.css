@@ -1,0 +1,758 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Global Ultra Smooth & Ultra Fast Scroll Physics */
+html {
+  scroll-behavior: smooth !important;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Master Hardware-Accelerated Kinetic Scroll Optimization */
+.overflow-y-auto,
+.overflow-y-scroll,
+.overflow-x-auto,
+.overflow-x-scroll,
+.custom-scrollbar,
+#atelier-control-room-dashboard,
+#catalog-matrix-editor-form,
+#control-panel-catalog-table,
+#admin-orders-queue,
+.admin-scroll-zone {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important; /* Forces ultra kinetic, responsive deceleration on touch hardware */
+  
+  /* GPU compositing bypass to prevent browser paint lag during high-speed scrolls */
+  backface-visibility: hidden;
+  perspective: 1000px;
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position, transform;
+  
+  /* Scroll stabilizing performance optimizations */
+  scroll-boundary-behavior: contain;
+  overflow-anchor: auto;
+}
+
+/* Specific Ultra-Smooth overrides for the Admin Panel Layout and Product Deploy Template */
+#atelier-control-room-dashboard,
+#catalog-matrix-editor-form,
+#control-panel-catalog-table,
+#admin-orders-queue,
+.admin-black-green-theme {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important;
+  contain: paint; /* Enforces strict painter isolation to bypass unnecessary global layout recalculations */
+  transform: translateZ(0); /* Promotes elements to separate render layers for fluid 120Hz/144Hz frame rendering */
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+/* Luxury visual fade animations helper */
+.animate-studio-reveal {
+  animation: reveal 0.08s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-admin-reveal {
+  animation: adminReveal 0.08s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes adminReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Snappy reveal animation for dialogs, popups and confirmations */
+.animate-confirm-reveal {
+  animation: reveal 0.16s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* Luxury premium smooth invoice container entrance animation */
+.animate-invoice-reveal {
+  animation: invoiceReveal 0.45s cubic-bezier(0.25, 1, 0.3, 1) forwards;
+}
+
+/* Smooth backdrop fade-in for premium layout */
+.animate-backdrop-fade {
+  animation: backdropFade 0.35s cubic-bezier(0.25, 1, 0.3, 1) forwards;
+}
+
+/* Ultra fast backdrop fade-in for dialog check out confirmation */
+.animate-backdrop-fade-fast {
+  animation: backdropFade 0.16s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes invoiceReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes backdropFade {
+  from {
+    opacity: 0;
+    background-color: rgba(12, 10, 9, 0);
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    background-color: rgba(12, 10, 9, 0.85);
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* Subtle green highlight pulse animation for inventory update */
+@keyframes greenPulse {
+  0%, 100% {
+    transform: scale(1);
+    background-color: rgba(220, 252, 231, 1); /* bg-emerald-100 */
+    color: rgba(6, 95, 70, 1); /* text-emerald-800 */
+    border-color: rgba(167, 243, 208, 1); /* border-emerald-200 */
+  }
+  50% {
+    transform: scale(1.08);
+    background-color: rgba(16, 185, 129, 1); /* brand emerald-500 */
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    border-color: rgba(16, 185, 129, 1);
+  }
+}
+
+.animate-inventory-save-pulse {
+  animation: greenPulse 1.2s ease-in-out infinite;
+}
+
+/* Print Specific Overrides to make standard browser printing absolutely pristine */
+@media print {
+  /* Disable all transitions, transforms and animations for instantaneous print processing */
+  *, *::before, *::after {
+    background-image: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+    transition-duration: 0s !important;
+    animation: none !important;
+    animation-duration: 0s !important;
+    transform: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    will-change: auto !important;
+  }
+
+  /* Set document margin and background target perfect A5 dimensions without blank secondary pages */
+  @page {
+    size: auto;
+    margin: 10mm !important;
+  }
+
+  @page a5_invoice_page {
+    size: A5 portrait;
+    margin: 4mm 9mm 4mm 6mm !important; /* Increased right margin from 6mm to 9mm to prevent printer hardware clipping */
+  }
+
+  @page a4_inventory_page {
+    size: A4 portrait;
+    margin: 15mm 15mm 15mm 15mm !important; /* Symmetrical margins for stable and perfectly aligned A4 printing */
+  }
+
+  body, html {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .invoice-container {
+    width: 100% !important;
+    transform: scale(1) !important;
+  }
+
+  /* Make sure the main application container and all React roots don't force height or scroll constraints */
+  #root,
+  .min-h-screen,
+  #main-app-container,
+  #root > div {
+    background: transparent !important;
+    background-color: transparent !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide absolutely everything that is marked with print:hidden and prevent block calculations */
+  .print\:hidden,
+  #root > div > *:not(#invoice-print-modal):not(#customer-report-print-modal):not(#inventory-report-print-modal):not(#invoice-printed-card):not(#customer-report-printed-card):not(#inventory-report-printed-card),
+  header,
+  footer,
+  nav,
+  main,
+  #active-append-mode-bar,
+  #bottom-nav,
+  #product-detail-modal,
+  #cart-drawer-panel,
+  #qr-scanner-modal,
+  #invoice-print-controls,
+  #invoice-addon-cta-banner,
+  #checkout-notification-banner,
+  #bottom-nav-bag,
+  [id^="bottom-nav"] {
+    display: none !important;
+    content-visibility: hidden !important;
+    contain: strict !important;
+    contain-intrinsic-size: 0 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    position: absolute !important;
+    pointer-events: none !important;
+  }
+
+  /* Position the printing container statically so it behaves normally in paper flow without clipping */
+  #invoice-print-modal,
+  #customer-report-print-modal,
+  #inventory-report-print-modal {
+    position: static !important;
+    display: block !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+  }
+
+  /* Optimize invoice card wrapper specifically for A5 page widths and margins */
+  #invoice-printed-card,
+  #customer-report-printed-card {
+    page: a5_invoice_page !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 10mm 0 6mm !important; /* Increased right padding from 4mm to 10mm to create a wide safety buffer on the right edge */
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    position: static !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    animation: none !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    content-visibility: visible !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Define inventory card wrapper specifically for A4 with perfect symmetrical centering */
+  #inventory-report-printed-card {
+    page: a4_inventory_page !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 180mm !important;
+    width: 180mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    position: static !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    animation: none !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    content-visibility: visible !important;
+  }
+
+  /* Refine font colors for crisp black ink print output (monochrome spools print instantly) */
+  #invoice-printed-card *,
+  #invoice-printed-card .text-amber-600,
+  #invoice-printed-card .text-amber-700,
+  #invoice-printed-card .text-stone-950,
+  #invoice-printed-card .text-stone-900,
+  #invoice-printed-card .text-stone-800,
+  #invoice-printed-card .text-stone-700,
+  #invoice-printed-card .text-stone-600,
+  #invoice-printed-card .text-stone-500,
+  #invoice-printed-card .text-stone-400,
+  #customer-report-printed-card *,
+  #customer-report-printed-card .text-amber-600,
+  #customer-report-printed-card .text-amber-700,
+  #customer-report-printed-card .text-stone-950,
+  #customer-report-printed-card .text-stone-900,
+  #customer-report-printed-card .text-stone-800,
+  #customer-report-printed-card .text-stone-700,
+  #customer-report-printed-card .text-stone-600,
+  #customer-report-printed-card .text-stone-500,
+  #customer-report-printed-card .text-stone-400,
+  #inventory-report-printed-card *,
+  #inventory-report-printed-card .text-amber-600,
+  #inventory-report-printed-card .text-amber-700,
+  #inventory-report-printed-card .text-stone-950,
+  #inventory-report-printed-card .text-stone-900,
+  #inventory-report-printed-card .text-stone-800,
+  #inventory-report-printed-card .text-stone-700,
+  #inventory-report-printed-card .text-stone-600,
+  #inventory-report-printed-card .text-stone-500,
+  #inventory-report-printed-card .text-stone-400 {
+    color: #000000 !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure monospace numbers look absolutely sharp and lightweight */
+  #invoice-printed-card .font-mono,
+  #invoice-printed-card .font-mono *,
+  #customer-report-printed-card .font-mono,
+  #customer-report-printed-card .font-mono *,
+  #inventory-report-printed-card .font-mono,
+  #inventory-report-printed-card .font-mono * {
+    font-family: "Courier New", Courier, Monaco, Consolas, monospace !important;
+  }
+
+  /* Layout tweaks for double-column parameters block on tight A5 dimensions */
+  #invoice-printed-card .grid-cols-2,
+  #customer-report-printed-card .grid-cols-2 {
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    display: grid !important;
+  }
+
+  #invoice-printed-card .grid-cols-2 > div,
+  #customer-report-printed-card .grid-cols-2 > div {
+    padding: 6px 8px !important;
+    border-radius: 2px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #111111 !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Tighten spacing of the invoice details table to guarantee single-page rendering on A5 */
+  #invoice-printed-card table,
+  #customer-report-printed-card table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 10px !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Items details table compact columns structure to prevent right overflow clipping on A5 size */
+  #print-items-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+
+  #print-items-table th:nth-child(1),
+  #print-items-table td:nth-child(1) {
+    width: auto !important; /* ITEM DESCRIPTION takes remaining space */
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    text-align: left !important;
+  }
+
+  #print-items-table th:nth-child(2),
+  #print-items-table td:nth-child(2) {
+    width: 32px !important; /* QTY column */
+    text-align: center !important;
+  }
+
+  #print-items-table th:nth-child(3),
+  #print-items-table td:nth-child(3) {
+    width: 65px !important; /* UNIT price column */
+    text-align: right !important;
+  }
+
+  #print-items-table th:nth-child(4),
+  #print-items-table td:nth-child(4) {
+    width: 75px !important; /* TOTAL price column */
+    text-align: right !important;
+    padding-right: 4px !important;
+  }
+
+  /* Ledger statement table columns structuring */
+  #print-ledger-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+
+  #print-ledger-table th:nth-child(1),
+  #print-ledger-table td:nth-child(1) {
+    width: 80px !important; /* Order ID / Date */
+    word-break: break-all !important;
+  }
+
+  #print-ledger-table th:nth-child(2),
+  #print-ledger-table td:nth-child(2) {
+    width: auto !important; /* Purchased items takes maximum space */
+    word-break: break-word !important;
+  }
+
+  #print-ledger-table th:nth-child(3),
+  #print-ledger-table td:nth-child(3) {
+    width: 110px !important; /* Payment Method / Courier Route */
+    word-break: break-word !important;
+  }
+
+  #print-ledger-table th:nth-child(4),
+  #print-ledger-table td:nth-child(4) {
+    width: 55px !important; /* Status */
+    text-align: center !important;
+  }
+
+  #print-ledger-table th:nth-child(5),
+  #print-ledger-table td:nth-child(5) {
+    width: 70px !important; /* Net Paid column */
+    text-align: right !important;
+  }
+
+  #invoice-printed-card table tr,
+  #customer-report-printed-card table tr {
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
+
+  #invoice-printed-card table th,
+  #customer-report-printed-card table th {
+    padding: 4px 6px !important;
+    font-size: 8px !important;
+    border-bottom: 1.5px solid #000000 !important;
+    color: #000000 !important;
+    text-transform: uppercase !important;
+  }
+
+  #invoice-printed-card table td,
+  #customer-report-printed-card table td {
+    padding: 4px 6px !important;
+    font-size: 9px !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+    vertical-align: middle !important;
+  }
+
+  #invoice-printed-card table tbody tr:last-child td,
+  #customer-report-printed-card table tbody tr:last-child td {
+    border-bottom: 1.5px solid #000000 !important;
+  }
+
+  /* Scale down the corporate star branding vectors correctly */
+  #invoice-printed-card svg,
+  #invoice-printed-card [id^="star"],
+  #customer-report-printed-card svg,
+  #customer-report-printed-card [id^="star"] {
+    max-width: 26px !important;
+    max-height: 26px !important;
+    display: inline-block !important;
+    color: #000000 !important;
+  }
+
+  /* Refine subtotal list box with custom high-contrast highlight border box wrapping */
+  #invoice-printed-card .w-64,
+  #customer-report-printed-card .w-64 {
+    width: 220px !important; /* Accommodate complete values and currency symbols elegantly */
+    margin-top: 10px !important;
+    padding: 10px 14px 10px 14px !important; /* Symmetric professional padding to ensure exact layout balance */
+    font-size: 10px !important;
+    float: right !important;
+    margin-right: 0px !important; /* Perfectly aligned with the right-hand edge of the item description table (TOTAL column) above */
+    border: 2px solid #000000 !important; /* Solid visible black box border as requested */
+    border-radius: 4px !important;
+    background-color: #fafafa !important; /* Highlight background for crisp text contrast */
+    box-sizing: border-box !important;
+  }
+
+  /* Make the final row inside calculations block (TOTAL COLLECTABLE) look exceptionally bold and prominent */
+  #invoice-printed-card .w-64 > div:last-child,
+  #customer-report-printed-card .w-64 > div:last-child {
+    border-top: 1.5px solid #000000 !important; /* Double/thick horizontal line divider */
+    margin-top: 8px !important;
+    padding-top: 8px !important;
+    font-size: 11.5px !important; /* Larger text size for main collectable amount */
+    font-weight: 900 !important; /* Thick high-contrast typography font weight */
+  }
+
+  /* Double signature segment: lock bottom offsets and font scales */
+  #invoice-footer-container {
+    margin-top: 15px !important;
+    padding-top: 8px !important;
+    border-top: 1.5px solid #000000 !important;
+    clear: both !important;
+  }
+
+  #invoice-printed-signatures-row {
+    margin-top: 25px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+  }
+
+  #invoice-printed-signatures-row .w-52,
+  #invoice-printed-signatures-row .w-48 {
+    width: 140px !important;
+  }
+
+  #invoice-printed-signatures-row .border-t {
+    border-top: 1px solid #000000 !important;
+    font-size: 9px !important;
+    padding-top: 4px !important;
+  }
+
+  #invoice-printed-signatures-row .h-12 {
+    height: 24px !important;
+  }
+
+  /* Hide all product images when printing to avoid any network card DNS/fetching resolution delays */
+  img:not([alt="Store Signature"]):not([alt="Order QR"]) {
+    display: none !important;
+    content-visibility: hidden !important;
+  }
+
+  /* Ensure the store signature image itself prints nicely but is compactly sized */
+  img[alt="Store Signature"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    display: block !important;
+    opacity: 1 !important;
+    max-height: 24px !important;
+    max-width: 100px !important;
+    animation: none !important;
+  }
+}
+
+/* ==================== ADMIN PANEL CUSTOM BLACK & GREEN THEME ==================== */
+/* Admin Panel container solid black theme with glowing green theme border */
+.admin-black-green-theme {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #22c55e !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.1) !important;
+}
+
+/* Target all types of text variables inside Admin area to render as green */
+.admin-black-green-theme,
+.admin-black-green-theme *,
+.admin-black-green-theme h1,
+.admin-black-green-theme h2,
+.admin-black-green-theme h3,
+.admin-black-green-theme h4,
+.admin-black-green-theme h5,
+.admin-black-green-theme h6,
+.admin-black-green-theme p,
+.admin-black-green-theme label,
+.admin-black-green-theme span,
+.admin-black-green-theme th,
+.admin-black-green-theme td,
+.admin-black-green-theme strong,
+.admin-black-green-theme em,
+.admin-black-green-theme small,
+.admin-black-green-theme table {
+  color: #22c55e !important;
+}
+
+/* Dim text color for secondary states/logs */
+.admin-black-green-theme .text-stone-400,
+.admin-black-green-theme .text-stone-500,
+.admin-black-green-theme .text-stone-600,
+.admin-black-green-theme .text-stone-700,
+.admin-black-green-theme .italic {
+  color: #16a34a !important; /* Slightly darker forest green */
+}
+
+/* All component backgrounds like cards, grids, boxes inside Admin View to be deep black */
+.admin-black-green-theme div,
+.admin-black-green-theme section,
+.admin-black-green-theme ul,
+.admin-black-green-theme li,
+.admin-black-green-theme form,
+.admin-black-green-theme table,
+.admin-black-green-theme thead,
+.admin-black-green-theme tbody,
+.admin-black-green-theme tr,
+.admin-black-green-theme th,
+.admin-black-green-theme td {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border-color: rgba(34, 197, 94, 0.2) !important;
+}
+
+/* Styling for forms, input elements and drop downs inside the admin space */
+.admin-black-green-theme input,
+.admin-black-green-theme select,
+.admin-black-green-theme textarea,
+.admin-black-green-theme option {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #22c55e !important;
+  border: 1px solid #22c55e !important;
+}
+
+.admin-black-green-theme input::placeholder {
+  color: rgba(34, 197, 94, 0.4) !important;
+}
+
+/* SVGs (except trash/close icon and printer icons) should use green strokes/fills */
+.admin-black-green-theme svg:not(.lucide-printer):not(.lucide-trash):not(.lucide-trash-2):not(.lucide-x) {
+  stroke: #22c55e !important;
+}
+
+/* ==================== BUTTON COLOR DESIGNATION ==================== */
+/* Standard non-print action buttons should be solid royal Blue */
+.admin-black-green-theme button:not(.admin-print-btn):not([id*="print"]):not([id*="launch-qr-print-job"]):not([id*="seal-btn"]) {
+  background-color: #1d4ed8 !important; /* Blue background */
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  border: 1px solid #2563eb !important;
+  box-shadow: 0 2px 4px rgba(29, 78, 216, 0.2) !important;
+  transition: all 0.05s cubic-bezier(0.16, 1, 0.3, 1) !important; /* Ultra-responsive 0.05s transition */
+  transform: translateZ(0); /* Cache in layer composer */
+}
+
+.admin-black-green-theme button:not(.admin-print-btn):not([id*="print"]):not([id*="launch-qr-print-job"]):not([id*="seal-btn"]):hover {
+  background-color: #2563eb !important; /* Brighter Blue on hover */
+  background: #2563eb !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) translateZ(0) !important;
+  box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Instant physical click confirmation to eliminate perceived UI input lag */
+.admin-black-green-theme button:active,
+#catalog-matrix-editor-form button:active,
+button[id*="local-slot-file-"]:active,
+#narrative-speaker-voice-btn:active {
+  transform: scale(0.93) translateY(0px) !important;
+  transition: all 0.03s linear !important;
+  filter: brightness(1.15) saturate(1.1) !important;
+}
+
+.admin-black-green-theme button:not(.admin-print-btn):not([id*="print"]):not([id*="launch-qr-print-job"]):not([id*="seal-btn"]) *,
+.admin-black-green-theme button:not(.admin-print-btn):not([id*="print"]):not([id*="launch-qr-print-job"]):not([id*="seal-btn"]) svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Print action buttons must be Crimson Red */
+.admin-black-green-theme button.admin-print-btn,
+.admin-black-green-theme button[id*="print"],
+.admin-black-green-theme button[id*="launch-qr-print-job"],
+button.admin-print-btn,
+button[id*="inventory-print-modal-trigger-btn"],
+#inventory-print-modal-trigger-btn,
+#launch-qr-print-job {
+  background-color: #b91c1c !important; /* Red background */
+  background: #b91c1c !important;
+  color: #ffffff !important;
+  border: 1px solid #dc2626 !important;
+  box-shadow: 0 2px 4px rgba(185, 28, 28, 0.2) !important;
+  transition: all 0.05s cubic-bezier(0.16, 1, 0.3, 1) !important; /* Ultra-responsive 0.05s transition */
+  transform: translateZ(0);
+}
+
+.admin-black-green-theme button.admin-print-btn:hover,
+.admin-black-green-theme button[id*="print"]:hover,
+.admin-black-green-theme button[id*="launch-qr-print-job"]:hover,
+button.admin-print-btn:hover,
+button[id*="inventory-print-modal-trigger-btn"]:hover,
+#inventory-print-modal-trigger-btn:hover,
+#launch-qr-print-job:hover {
+  background-color: #dc2626 !important; /* Brighter Red on hover */
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) translateZ(0) !important;
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3) !important;
+}
+
+.admin-black-green-theme button.admin-print-btn *,
+.admin-black-green-theme button.admin-print-btn svg,
+button.admin-print-btn *,
+button.admin-print-btn svg,
+#inventory-print-modal-trigger-btn *,
+#inventory-print-modal-trigger-btn svg,
+#launch-qr-print-job *,
+#launch-qr-print-job svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+
