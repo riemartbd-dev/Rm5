@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from "./utils/safeStorage";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ShoppingBag,
@@ -90,6 +91,39 @@ import {
   PieChart,
   Pie
 } from "recharts";
+
+const checkIfInsideIframe = (): boolean => {
+  try {
+    if (typeof window === "undefined" || !window.location) {
+      return false;
+    }
+    // 1. Check window.location.ancestorOrigins (Standard in Chrome/Safari/Edge/WebKit/Blink)
+    // This is 100% safe and never touches window.top/parent, completely avoiding security exception console warnings!
+    if (window.location.ancestorOrigins) {
+      return window.location.ancestorOrigins.length > 0;
+    }
+    // 2. Safe check with window.parent
+    if (window.parent) {
+      return window.parent !== window.self;
+    }
+    // 3. Fallback to window.top comparison
+    return window.self !== window.top;
+  } catch (err) {
+    // If accessing parent/top throws a SecurityError/DOMException, we are definitely inside a cross-origin iframe!
+    return true;
+  }
+};
+
+const getSafeSpeechSynthesis = (): SpeechSynthesis | null => {
+  try {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      return window.speechSynthesis;
+    }
+  } catch (err) {
+    console.warn("[SafeStorage] SpeechSynthesis is blocked or restricted:", err);
+  }
+  return null;
+};
 
 function stripHugeBase64(value: any): any {
   if (value === null || value === undefined) {
@@ -1572,7 +1606,18 @@ export default function App() {
 
   // Global App States
   const [lang, setLang] = useState<Language>("en");
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(() => {
+    try {
+      const saved = localStorage.getItem("riemart_products");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return false; // Instant load since we already have cached products!
+        }
+      }
+    } catch (e) {}
+    return true; // Fall back to showing loading screen if fresh visit
+  });
 
   // Highly Optimized Admin-Wide Action Spinner State & Interceptor
   const [isAdminLoading, setIsAdminLoading] = useState(false);
@@ -1870,8 +1915,9 @@ export default function App() {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const stopSpeaking = () => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    const synth = getSafeSpeechSynthesis();
+    if (synth) {
+      synth.cancel();
     }
     setIsSpeaking(false);
   };
@@ -1883,8 +1929,9 @@ export default function App() {
   };
 
   const findMaleVoice = (langCode: string): SpeechSynthesisVoice | null => {
-    if (!window.speechSynthesis) return null;
-    const voices = window.speechSynthesis.getVoices();
+    const synth = getSafeSpeechSynthesis();
+    if (!synth) return null;
+    const voices = synth.getVoices();
     // Normalize language codes (e.g. en-US vs en_US)
     const normalizedTarget = langCode.toLowerCase().replace("_", "-");
     const langVoices = voices.filter(v => 
@@ -1911,7 +1958,8 @@ export default function App() {
   };
 
   const handleNarrativeSpeech = (product: Product, narrativeLang: "en" | "bn") => {
-    if (!window.speechSynthesis) {
+    const synth = getSafeSpeechSynthesis();
+    if (!synth) {
       alert(lang === "en" ? "Web Speech API is not supported in this browser." : "আপনার ব্রাউজারটি ভয়েস রিডার সমর্থন করে না।");
       return;
     }
@@ -1922,7 +1970,7 @@ export default function App() {
     }
 
     // Cancel any ongoing speaking immediately
-    window.speechSynthesis.cancel();
+    synth.cancel();
 
     const rawHtml = product.descriptionEn && product.descriptionBn
       ? (narrativeLang === "en" ? product.descriptionEn : product.descriptionBn)
@@ -1966,16 +2014,18 @@ export default function App() {
 
     utteranceRef.current = utterance;
     setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
+    synth.speak(utterance);
   };
 
   useEffect(() => {
     // Trigger lazy-loading of Web Speech synthesis voices on mount/update so .getVoices() is ready
-    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        if (window.speechSynthesis) window.speechSynthesis.getVoices();
+    const synth = getSafeSpeechSynthesis();
+    if (synth && synth.onvoiceschanged !== undefined) {
+      synth.onvoiceschanged = () => {
+        const s = getSafeSpeechSynthesis();
+        if (s) s.getVoices();
       };
-      window.speechSynthesis.getVoices();
+      synth.getVoices();
     }
     
     stopSpeaking();
@@ -2149,7 +2199,7 @@ export default function App() {
   const [directStep, setDirectStep] = useState<"checkout" | "success">("checkout");
   const [directOrderRef, setDirectOrderRef] = useState<string>("");
 
-  const isInsideIframe = typeof window !== "undefined" && window.self !== window.top;
+  const isInsideIframe = checkIfInsideIframe();
 
   const getPrintUrl = (orderId: string) => {
     return `${window.location.protocol}//${window.location.host}${window.location.pathname}?invoiceId=${orderId}&print=true`;
@@ -2185,7 +2235,7 @@ export default function App() {
       if (typeof e.stopPropagation === "function") e.stopPropagation();
     }
 
-    const isInsideIframe = typeof window !== "undefined" && window.self !== window.top;
+    const isInsideIframe = checkIfInsideIframe();
     if (isInsideIframe) {
       if (printingOrder) {
         const printUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?invoiceId=${printingOrder.id}&print=true`;
@@ -2235,7 +2285,7 @@ export default function App() {
   };
 
   const handleCustomerPrintAction = (customer: any) => {
-    const isInsideIframe = typeof window !== "undefined" && window.self !== window.top;
+    const isInsideIframe = checkIfInsideIframe();
     if (isInsideIframe) {
       const printUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?customerReportPhone=${customer.phone}&print=true`;
       window.open(printUrl, "_blank");
@@ -2282,7 +2332,7 @@ export default function App() {
     if (printingOrder || printingCustomerReport) {
       const params = new URLSearchParams(window.location.search);
       const shouldAutoPrint = params.get("print") === "true";
-      const isInsideIframe = typeof window !== "undefined" && window.self !== window.top;
+      const isInsideIframe = checkIfInsideIframe();
       
       if (shouldAutoPrint && !isInsideIframe) {
         // Run with a minimal 200ms delay to guarantee full render & font paint
@@ -9452,7 +9502,7 @@ export default function App() {
                   setPrintingInventorySubCategory(subcategory);
                   setPrintingInventoryProducts(filteredProds);
 
-                  const isInsideIframe = typeof window !== "undefined" && window.self !== window.top;
+                  const isInsideIframe = checkIfInsideIframe();
                   if (isInsideIframe) {
                     const printUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?inventoryPrintCategory=${encodeURIComponent(category)}&inventoryPrintSubCategory=${encodeURIComponent(subcategory)}&print=true`;
                     window.open(printUrl, "_blank");
@@ -13916,7 +13966,7 @@ export default function App() {
             )}
 
             {/* If inside iframe, show optimized helper warning */}
-            {typeof window !== "undefined" && window.self !== window.top && (
+            {isInsideIframe && (
               <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-sm p-4 text-[11px] leading-relaxed flex items-start gap-3 shadow-xs print:hidden animate-pulse" id="invoice-iframe-print-warning">
                 <span className="text-sm shrink-0 animate-bounce select-none">💡</span>
                 <div className="text-left font-sans flex-1">

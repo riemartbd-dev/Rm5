@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useTransition } from "react";
 import { Search, Image, Loader2, X, Cloud, LogOut } from "lucide-react";
 import { Language } from "../types";
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from "../utils/safeStorage";
 import { 
   getStoredDriveToken, 
   googleDriveSignIn, 

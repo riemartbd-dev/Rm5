@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Sparkles, RefreshCw, Image, Edit2, Trash2, Bold, Italic, List, Cloud, Loader2 } from "lucide-react";
 import { Product, Category, Language } from "../types";
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from "../utils/safeStorage";
 import { DriveImagePickerModal } from "./DriveImagePickerModal";
 import { 
   getStoredDriveToken, 

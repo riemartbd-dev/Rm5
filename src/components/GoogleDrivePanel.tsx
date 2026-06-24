@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from "../utils/safeStorage";
 import { 
   Cloud, 
   Folder, 

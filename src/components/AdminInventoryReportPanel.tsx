@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Product, Category, Language } from "../types";
 import { CATEGORIES, CATEGORY_TRANSLATIONS } from "../data";
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from "../utils/safeStorage";
 import { 
   FileSpreadsheet, 
   Printer, 

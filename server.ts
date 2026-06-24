@@ -187,6 +187,145 @@ function checkQuotaError(err: any) {
   }
 }
 
+let isRefreshingBackground = false;
+
+async function triggerBackgroundDbRefresh() {
+  if (isRefreshingBackground || !db) return;
+  isRefreshingBackground = true;
+  console.log("[RIEMART Cache Revalidation] Triggering background refresh of Firestore state...");
+  try {
+    await refreshDbStateForce();
+    console.log("[RIEMART Cache Revalidation] Background refresh completed successfully.");
+  } catch (err: any) {
+    console.error("[RIEMART Cache Revalidation] Background refresh failed:", err.message || err);
+  } finally {
+    isRefreshingBackground = false;
+  }
+}
+
+async function refreshDbStateForce() {
+  let products: any[] = [];
+  let orders: any[] = [];
+  let logs: any[] = [];
+  let registeredUsers: any[] = [];
+  let subscriptions: any[] = [];
+  let customerNotifications: any[] = [];
+  let userOrders: any[] = [];
+  let settings: any = null;
+  let hasErrors = false;
+
+  const queries = [
+    getDocs(collection(db, "products"))
+      .then(q => { products = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: products query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDocs(collection(db, "orders"))
+      .then(q => { orders = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: orders query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDocs(collection(db, "logs"))
+      .then(q => { logs = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: logs query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDocs(collection(db, "registeredUsers"))
+      .then(q => { registeredUsers = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: registeredUsers query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDocs(collection(db, "subscriptions"))
+      .then(q => { subscriptions = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: subscriptions query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDocs(collection(db, "customerNotifications"))
+      .then(q => { customerNotifications = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: customerNotifications query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDocs(collection(db, "userOrders"))
+      .then(q => { userOrders = q.docs.map(d => d.data()); })
+      .catch(e => { console.error("FAIL: userOrders query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
+    getDoc(doc(db, "settings", "store"))
+      .then(docSnap => { settings = docSnap.exists() ? docSnap.data() : null; })
+      .catch(e => { console.error("FAIL: settings doc query failed:", e.message || e); hasErrors = true; checkQuotaError(e); })
+  ];
+
+  await Promise.all(queries);
+
+  if (hasErrors) {
+    console.warn("[RIEMART Server Coherence] One or more Firestore collection reads failed. Failing over to previous disk state/cache to protect catalog lists from deletions.");
+    if (cachedState) return cachedState;
+    return readDb();
+  }
+
+  // Automated runtime migration: if Firestore collections are completely empty, seed them from local db.json
+  const isNewDb = !hasErrors && products.length === 0 && orders.length === 0 && (!settings);
+  if (isNewDb) {
+    console.log("Firestore empty! Migrating local db.json data to Cloud Firestore...");
+    const fileDb = readDb();
+    if (fileDb.products && Array.isArray(fileDb.products)) {
+      for (const p of fileDb.products) {
+        if (p && p.id) await setDoc(doc(db, "products", p.id), p);
+      }
+    }
+    if (fileDb.orders && Array.isArray(fileDb.orders)) {
+      for (const o of fileDb.orders) {
+        if (o && o.id) await setDoc(doc(db, "orders", o.id), o);
+      }
+    }
+    if (fileDb.logs && Array.isArray(fileDb.logs)) {
+      for (const l of fileDb.logs) {
+        if (l && l.id) await setDoc(doc(db, "logs", l.id), l);
+      }
+    }
+    if (fileDb.registeredUsers && Array.isArray(fileDb.registeredUsers)) {
+      for (const u of fileDb.registeredUsers) {
+        if (u && u.phone) await setDoc(doc(db, "registeredUsers", u.phone), u);
+      }
+    }
+    if (fileDb.subscriptions && Array.isArray(fileDb.subscriptions)) {
+      for (const s of fileDb.subscriptions) {
+        if (s && s.id) await setDoc(doc(db, "subscriptions", s.id), s);
+      }
+    }
+    if (fileDb.customerNotifications && Array.isArray(fileDb.customerNotifications)) {
+      for (const n of fileDb.customerNotifications) {
+        if (n && n.id) await setDoc(doc(db, "customerNotifications", n.id), n);
+      }
+    }
+    if (fileDb.userOrders && Array.isArray(fileDb.userOrders)) {
+      for (const uo of fileDb.userOrders) {
+        if (uo && uo.id) await setDoc(doc(db, "userOrders", uo.id), uo);
+      }
+    }
+    if (fileDb.settings) {
+      await setDoc(doc(db, "settings", "store"), fileDb.settings);
+    }
+    cachedState = fileDb;
+    lastCacheTime = Date.now();
+    return fileDb;
+  }
+
+  // Stable-sort lists consistently to prevent JSON comparison discrepancies or flickering on client loads
+  products.sort((a: any, b: any) => String(a.id || "").localeCompare(String(b.id || "")));
+  orders.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  logs.sort((a: any, b: any) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+  registeredUsers.sort((a: any, b: any) => String(a.phone || "").localeCompare(String(b.phone || "")));
+  subscriptions.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  customerNotifications.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  userOrders.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+  const state = {
+    products,
+    orders,
+    logs,
+    registeredUsers,
+    subscriptions,
+    customerNotifications,
+    userOrders,
+    settings: settings || readDb().settings // fallback settings if doc doesn't exist
+  };
+
+  // Save a backup copy locally
+  writeDb(state);
+  
+  // Update in-memory cache
+  cachedState = state;
+  lastCacheTime = Date.now();
+  return state;
+}
+
 // Compile full db state from Firestore or fall back to db.json
 async function getFirestoreDbState() {
   if (!db) {
@@ -204,131 +343,16 @@ async function getFirestoreDbState() {
     }
   }
   
-  if (cachedState && (now - lastCacheTime < CACHE_TTL_MS)) {
+  if (cachedState) {
+    // If the cache is older than 60 seconds, trigger async background refresh
+    if (now - lastCacheTime > 60000) {
+      triggerBackgroundDbRefresh();
+    }
     return cachedState;
   }
   
   try {
-    let products: any[] = [];
-    let orders: any[] = [];
-    let logs: any[] = [];
-    let registeredUsers: any[] = [];
-    let subscriptions: any[] = [];
-    let customerNotifications: any[] = [];
-    let userOrders: any[] = [];
-    let settings: any = null;
-    let hasErrors = false;
-
-    // Use parallel Promise.all to fetch all collections concurrently (major performance boost!)
-    const queries = [
-      getDocs(collection(db, "products"))
-        .then(q => { products = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: products query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDocs(collection(db, "orders"))
-        .then(q => { orders = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: orders query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDocs(collection(db, "logs"))
-        .then(q => { logs = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: logs query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDocs(collection(db, "registeredUsers"))
-        .then(q => { registeredUsers = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: registeredUsers query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDocs(collection(db, "subscriptions"))
-        .then(q => { subscriptions = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: subscriptions query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDocs(collection(db, "customerNotifications"))
-        .then(q => { customerNotifications = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: customerNotifications query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDocs(collection(db, "userOrders"))
-        .then(q => { userOrders = q.docs.map(d => d.data()); })
-        .catch(e => { console.error("FAIL: userOrders query failed:", e.message || e); hasErrors = true; checkQuotaError(e); }),
-      getDoc(doc(db, "settings", "store"))
-        .then(docSnap => { settings = docSnap.exists() ? docSnap.data() : null; })
-        .catch(e => { console.error("FAIL: settings doc query failed:", e.message || e); hasErrors = true; checkQuotaError(e); })
-    ];
-
-    await Promise.all(queries);
-
-    if (hasErrors) {
-      console.warn("[RIEMART Server Coherence] One or more Firestore collection reads failed. Failing over to previous disk state/cache to protect catalog lists from deletions.");
-      return cachedState || readDb();
-    }
-
-    // Automated runtime migration: if Firestore collections are completely empty, seed them from local db.json
-    const isNewDb = !hasErrors && products.length === 0 && orders.length === 0 && (!settings);
-    if (isNewDb) {
-      console.log("Firestore empty! Migrating local db.json data to Cloud Firestore...");
-      const fileDb = readDb();
-      if (fileDb.products && Array.isArray(fileDb.products)) {
-        for (const p of fileDb.products) {
-          if (p && p.id) await setDoc(doc(db, "products", p.id), p);
-        }
-      }
-      if (fileDb.orders && Array.isArray(fileDb.orders)) {
-        for (const o of fileDb.orders) {
-          if (o && o.id) await setDoc(doc(db, "orders", o.id), o);
-        }
-      }
-      if (fileDb.logs && Array.isArray(fileDb.logs)) {
-        for (const l of fileDb.logs) {
-          if (l && l.id) await setDoc(doc(db, "logs", l.id), l);
-        }
-      }
-      if (fileDb.registeredUsers && Array.isArray(fileDb.registeredUsers)) {
-        for (const u of fileDb.registeredUsers) {
-          if (u && u.phone) await setDoc(doc(db, "registeredUsers", u.phone), u);
-        }
-      }
-      if (fileDb.subscriptions && Array.isArray(fileDb.subscriptions)) {
-        for (const s of fileDb.subscriptions) {
-          if (s && s.id) await setDoc(doc(db, "subscriptions", s.id), s);
-        }
-      }
-      if (fileDb.customerNotifications && Array.isArray(fileDb.customerNotifications)) {
-        for (const n of fileDb.customerNotifications) {
-          if (n && n.id) await setDoc(doc(db, "customerNotifications", n.id), n);
-        }
-      }
-      if (fileDb.userOrders && Array.isArray(fileDb.userOrders)) {
-        for (const uo of fileDb.userOrders) {
-          if (uo && uo.id) await setDoc(doc(db, "userOrders", uo.id), uo);
-        }
-      }
-      if (fileDb.settings) {
-        await setDoc(doc(db, "settings", "store"), fileDb.settings);
-      }
-      cachedState = fileDb;
-      lastCacheTime = Date.now();
-      return fileDb;
-    }
-
-    // Stable-sort lists consistently to prevent JSON comparison discrepancies or flickering on client loads
-    products.sort((a: any, b: any) => String(a.id || "").localeCompare(String(b.id || "")));
-    orders.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-    logs.sort((a: any, b: any) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-    registeredUsers.sort((a: any, b: any) => String(a.phone || "").localeCompare(String(b.phone || "")));
-    subscriptions.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-    customerNotifications.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-    userOrders.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-
-    const state = {
-      products,
-      orders,
-      logs,
-      registeredUsers,
-      subscriptions,
-      customerNotifications,
-      userOrders,
-      settings: settings || readDb().settings // fallback settings if doc doesn't exist
-    };
-
-    // Save a backup copy locally
-    writeDb(state);
-    
-    // Update in-memory cache
-    cachedState = state;
-    lastCacheTime = Date.now();
-    return state;
+    return await refreshDbStateForce();
   } catch (err) {
     console.error("Error reading from Firestore Web SDK, falling back to db.json:", err);
     return readDb();
