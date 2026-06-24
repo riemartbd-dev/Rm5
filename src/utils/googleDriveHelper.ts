@@ -62,11 +62,16 @@ export async function googleDriveSignIn(customClientId?: string): Promise<{ toke
     const left = window.screen.width / 2 - width / 2;
     const top = window.screen.height / 2 - height / 2;
 
-    const popup = window.open(
-      authUrl,
-      "GoogleDriveAuthPopup",
-      `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=yes`
-    );
+    let popup: Window | null = null;
+    try {
+      popup = window.open(
+        authUrl,
+        "GoogleDriveAuthPopup",
+        `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=yes`
+      );
+    } catch (e) {
+      console.warn("window.open blocked or threw exception in sandbox:", e);
+    }
 
     if (!popup) {
       reject(new Error("POPUP_BLOCKED"));

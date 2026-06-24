@@ -99,10 +99,18 @@ export const GoogleDrivePanel: React.FC<GoogleDrivePanelProps> = ({
   // Google OAuth State
   const [token, setToken] = useState<string | null>(googleAccessToken || getStoredDriveToken());
   const [userEmail, setUserEmail] = useState<string | null>(() => {
-    return localStorage.getItem("riemart_gdrive_email") || null;
+    try {
+      return localStorage.getItem("riemart_gdrive_email") || null;
+    } catch {
+      return null;
+    }
   });
   const [folderId, setFolderId] = useState<string | null>(() => {
-    return localStorage.getItem("riemart_gdrive_folder_id") || null;
+    try {
+      return localStorage.getItem("riemart_gdrive_folder_id") || null;
+    } catch {
+      return null;
+    }
   });
   const [clientIdInput, setClientIdInput] = useState<string>(googleClientId || getSavedClientId());
   const [showClientIdField, setShowClientIdField] = useState<boolean>(!clientIdInput);
@@ -118,7 +126,11 @@ export const GoogleDrivePanel: React.FC<GoogleDrivePanelProps> = ({
   const [isSyncingAllInvoices, setIsSyncingAllInvoices] = useState(false);
   const [syncProgressMsg, setSyncProgressMsg] = useState<string>("");
   const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(() => {
-    return localStorage.getItem("riemart_gdrive_autosync") === "true";
+    try {
+      return localStorage.getItem("riemart_gdrive_autosync") === "true";
+    } catch {
+      return false;
+    }
   });
 
   // Google Sheets Action Progress
@@ -334,15 +346,19 @@ export const GoogleDrivePanel: React.FC<GoogleDrivePanelProps> = ({
     setFolderId(null);
     setDriveFiles([]);
     setDriveImages([]);
-    localStorage.removeItem("riemart_gdrive_email");
-    localStorage.removeItem("riemart_gdrive_folder_id");
+    try {
+      localStorage.removeItem("riemart_gdrive_email");
+      localStorage.removeItem("riemart_gdrive_folder_id");
+    } catch {}
     onLogAction("info", "Disconnected your Google Workspace credentials safely.", "গুগল ইন্টিগ্রেশন সেশন সুরক্ষিতভাবে ডিসকানেক্ট করা হয়েছে।");
   };
 
   const toggleAutoSync = () => {
     const nextVal = !autoSyncEnabled;
     setAutoSyncEnabled(nextVal);
-    localStorage.setItem("riemart_gdrive_autosync", nextVal ? "true" : "false");
+    try {
+      localStorage.setItem("riemart_gdrive_autosync", nextVal ? "true" : "false");
+    } catch {}
     onLogAction(
       "info",
       `Dynamic background auto-sync state set to: ${nextVal ? 'ACTIVE' : 'INACTIVE'}`,

@@ -59,7 +59,8 @@ import {
   Truck,
   LogOut,
   Volume2,
-  VolumeX
+  VolumeX,
+  Loader2
 } from "lucide-react";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
@@ -74,8 +75,6 @@ import { getStoredDriveToken, uploadInvoiceToFolder, googleDriveSignIn } from ".
 import { ProductFormEditor } from "./components/ProductFormEditor";
 import { PromoSettingsPanel } from "./components/PromoSettingsPanel";
 import { AdminUxPlayground } from "./components/AdminUxPlayground";
-import { db, OperationType, handleFirestoreError } from "./firebase";
-import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -319,6 +318,20 @@ function safeSaveToLocalStorage(key: string, value: any): void {
       }
     }
   }
+}
+
+function safeGetLocalStorageItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeRemoveLocalStorageItem(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
 }
 
 function convertDriveUrl(url: string): string {
@@ -1559,6 +1572,92 @@ export default function App() {
 
   // Global App States
   const [lang, setLang] = useState<Language>("en");
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Highly Optimized Admin-Wide Action Spinner State & Interceptor
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [adminLoadingMessage, setAdminLoadingMessage] = useState("");
+
+  const triggerAdminLoadingSpinner = (message: string, duration: number = 650) => {
+    setAdminLoadingMessage(message);
+    setIsAdminLoading(true);
+    setTimeout(() => {
+      setIsAdminLoading(false);
+    }, duration);
+  };
+
+  const handleAdminPanelClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target || typeof target.closest !== "function") return;
+    const button = target.closest("button");
+    if (button) {
+      if (button.disabled) return;
+
+      const buttonText = (button.innerText || button.getAttribute("title") || button.getAttribute("aria-label") || "").trim();
+      const cleanText = buttonText.split("\n")[0];
+      
+      const isLogout = button.id === "control-room-seal-btn" || cleanText.toLowerCase().includes("logout") || cleanText.includes("লগআউট");
+      const isExit = button.id === "control-room-exit-btn" || cleanText.toLowerCase().includes("storefront") || cleanText.includes("স্টোরফ্রেম");
+      
+      if (!isLogout && !isExit) {
+        let bnMsg = "অনুরোধটি প্রক্রিয়াকরণ করা হচ্ছে...";
+        let enMsg = `Processing Administrative Request...`;
+
+        // Check for child SVG classes or icons to support pure icon buttons
+        let iconType = "";
+        const svgs = button.querySelectorAll("svg");
+        svgs.forEach((svg) => {
+          const cls = (svg.getAttribute("class") || "").toLowerCase();
+          if (cls.includes("edit") || cls.includes("pencil")) iconType = "edit";
+          else if (cls.includes("trash") || cls.includes("delete") || cls.includes("trash2")) iconType = "delete";
+          else if (cls.includes("plus") || cls.includes("circle")) iconType = "create";
+          else if (cls.includes("printer") || cls.includes("spreadsheet")) iconType = "print";
+          else if (cls.includes("cloud") || cls.includes("refresh") || cls.includes("cw")) iconType = "sync";
+        });
+        
+        const textLower = cleanText.toLowerCase();
+        if (textLower.includes("dashboard") || button.id === "control-room-dashboard-btn") {
+          enMsg = "Loading Administrative Dashboard...";
+          bnMsg = "অ্যাডমিন ড্যাশবোর্ড লোড হচ্ছে...";
+        } else if (textLower.includes("customer") || button.id === "control-room-customers-btn") {
+          enMsg = "Retrieving Customer Profiles...";
+          bnMsg = "গ্রাহক প্রোফাইল লোড হচ্ছে...";
+        } else if (textLower.includes("qr") || button.id === "control-room-qr-generator-btn") {
+          enMsg = "Generating Studio QR stamps...";
+          bnMsg = "কিউআর স্ট্যাম্প তৈরি করা হচ্ছে...";
+        } else if (textLower.includes("inventory") || button.id === "control-room-inventory-report-btn" || iconType === "print") {
+          enMsg = "Compiling Ledger & Stocks...";
+          bnMsg = "ইনভেন্টরি রিপোর্ট ও লেজার সংকলন হচ্ছে...";
+        } else if (textLower.includes("delivery") || button.id === "control-room-delivery-settings-btn") {
+          enMsg = "Loading Logistical Outlets...";
+          bnMsg = "ডেলিভারি কনফিগারেশন খোলা হচ্ছে...";
+        } else if (textLower.includes("google") || button.id === "control-room-gdrive-sync-btn") {
+          enMsg = "Synchronizing with Google Workspace...";
+          bnMsg = "গুগল ড্রাইভ কানেক্ট করা হচ্ছে...";
+        } else if (textLower.includes("save") || textLower.includes("সংরক্ষণ") || textLower.includes("সংরক্ষণ করুন") || textLower.includes("update") || textLower.includes("আপডেট")) {
+          enMsg = "Saving updates to cloud database...";
+          bnMsg = "ডাটাবেজে তথ্য সংরক্ষণ করা হচ্ছে...";
+        } else if (textLower.includes("create") || textLower.includes("যোগ") || textLower.includes("নতুন প্রোডাক্ট") || iconType === "create") {
+          enMsg = "Opening Product Creator...";
+          bnMsg = "প্রোডাক্ট ক্রিয়েটর চালু করা হচ্ছে...";
+        } else if (textLower.includes("edit") || textLower.includes("এডিট") || iconType === "edit") {
+          enMsg = "Loading Product Editor...";
+          bnMsg = "প্রোডাক্ট এডিটর চালু করা হচ্ছে...";
+        } else if (textLower.includes("delete") || textLower.includes("মুছে") || iconType === "delete") {
+          enMsg = "Removing record from database...";
+          bnMsg = "ডাটাবেজ থেকে তথ্য মুছে ফেলা হচ্ছে...";
+        } else if (iconType === "sync") {
+          enMsg = "Synchronizing records...";
+          bnMsg = "তথ্য সমলয় করা হচ্ছে...";
+        } else if (cleanText) {
+          enMsg = `Executing "${cleanText}"...`;
+          bnMsg = `"${cleanText}" সম্পন্ন করা হচ্ছে...`;
+        }
+
+        triggerAdminLoadingSpinner(lang === "en" ? enMsg : bnMsg, 700);
+      }
+    }
+  };
 
   const [safeConfirmDialog, setSafeConfirmDialog] = useState<{
     title: string;
@@ -3542,16 +3641,22 @@ export default function App() {
 
   // Stable mounting polling effect to keep mobile list & laptop PC state perfectly synchronized
   useEffect(() => {
+    // Fail-safe timeout to ensure user is never stuck on an infinite loading screen under any circumstance
+    const failSafeTimer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 3500);
+
     const runSync = async () => {
       try {
         const res = await fetch("/api/sync/get");
-        if (!res.ok) return;
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
 
         // Ensure returning type is JSON to prevent "Unexpected token '<', ...is not valid JSON" errors
         const contentType = res.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-          console.warn("Polled sync: Received non-JSON response from server, likely HTML fallback during server start.");
-          return;
+          throw new Error("Received non-JSON response from server, likely HTML fallback during server start.");
         }
 
         const db = await res.json();
@@ -3637,6 +3742,7 @@ export default function App() {
         setTimeout(() => {
           isUpdatingFromServer.current = false;
           syncInitializedRef.current = true;
+          setIsInitialLoading(false);
         }, 120);
       } catch (err: any) {
         // Log transient fetch failures and json parsing errors from HTML responses as warnings to avoid triggering automated logs during server restart
@@ -3653,6 +3759,7 @@ export default function App() {
         }
         isUpdatingFromServer.current = false;
         syncInitializedRef.current = true;
+        setIsInitialLoading(false);
       }
     };
 
@@ -3660,7 +3767,10 @@ export default function App() {
     runSync();
 
     const timer = setInterval(runSync, 4000); // syncing loop every 4 seconds handles phone & laptop beautifully
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(failSafeTimer);
+    };
   }, []);
 
   // Autofill checkout from logged-in user details to make checkouts instant & elegant
@@ -4336,7 +4446,7 @@ export default function App() {
     );
 
     // Background Google Sheets auto-sync if configured and enabled
-    if (localStorage.getItem("riemart_sheets_autosync") === "true" && modifiedOrder) {
+    if (safeGetLocalStorageItem("riemart_sheets_autosync") === "true" && modifiedOrder) {
       exportOrdersToGoogleSheets([modifiedOrder], false);
     }
   };
@@ -5019,7 +5129,7 @@ export default function App() {
     setCustomerNotifications((prev) => [orderPlacedNotif, ...prev]);
 
     // Background Google Sheets auto-sync if configured and enabled
-    if (localStorage.getItem("riemart_sheets_autosync") === "true") {
+    if (safeGetLocalStorageItem("riemart_sheets_autosync") === "true") {
       exportOrdersToGoogleSheets([newOrder], false);
     }
 
@@ -5164,7 +5274,7 @@ export default function App() {
     };
     setCustomerNotifications((prev) => [orderPlacedNotif, ...prev]);
 
-    if (localStorage.getItem("riemart_sheets_autosync") === "true") {
+    if (safeGetLocalStorageItem("riemart_sheets_autosync") === "true") {
       exportOrdersToGoogleSheets([newOrder], false);
     }
 
@@ -5481,6 +5591,45 @@ export default function App() {
         />
       );
     }
+  }
+
+  if (isInitialLoading) {
+    return (
+      <div className="fixed inset-0 z-[99999] bg-stone-50 flex flex-col items-center justify-center font-sans">
+        <div className="relative w-36 h-36 flex items-center justify-center mb-6 animate-pulse">
+          {/* Official Star logo representing RIEMART */}
+          <svg className="w-full h-full text-stone-900" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <mask id="star-logo-mask-react">
+                <rect x="0" y="0" width="200" height="200" fill="white" />
+                <rect x="90" y="92" width="110" height="28" fill="black" />
+              </mask>
+            </defs>
+            <path 
+              d="M 100 15 L 122 88 L 186 77 L 136 112 L 153 178 L 100 138 L 47 178 L 64 112 L 14 77 L 78 88 Z" 
+              stroke="currentColor" 
+              strokeWidth="15" 
+              strokeLinejoin="miter" 
+              strokeLinecap="square"
+              mask="url(#star-logo-mask-react)"
+            />
+            <text 
+              x="91" 
+              y="114" 
+              fill="currentColor" 
+              fontFamily="system-ui, -apple-system, sans-serif" 
+              fontWeight="950" 
+              fontSize="19"
+              letterSpacing="1.2"
+            >RIEMART</text>
+          </svg>
+        </div>
+        <div className="text-stone-500 font-mono text-[11px] uppercase tracking-[0.25em] mb-4">
+          {lang === "en" ? "Loading Premium Store..." : "প্রিমিয়াম স্টোর লোড হচ্ছে..."}
+        </div>
+        <div className="w-6 h-6 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
@@ -7390,7 +7539,11 @@ export default function App() {
             ) : (
               
               /* ==================== ATELIER CONTROL ROOM DASHBOARD ==================== */
-              <div className="space-y-10 admin-black-green-theme bg-black p-4 sm:p-6 rounded-md border border-green-500/20" id="atelier-control-room-dashboard">
+              <div 
+                onClickCapture={handleAdminPanelClick}
+                className="relative space-y-10 admin-black-green-theme bg-black p-4 sm:p-6 rounded-md border border-green-500/20" 
+                id="atelier-control-room-dashboard"
+              >
                 
                 {/* Dashboard Authorization Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-stone-900 text-white p-6 rounded-sm border border-stone-850 gap-4">
@@ -9345,6 +9498,28 @@ export default function App() {
             ) : (
               <AtelierQrStickerSpace lang={lang} onLogAction={addSystemLog} />
             )}
+          </div>
+        )}
+
+        {/* Highly Optimized Admin Action Spinner Overlay */}
+        {isAdminLoading && (
+          <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center">
+            <div className="bg-stone-900 border border-emerald-500/35 p-6 rounded shadow-2xl flex flex-col items-center justify-center max-w-sm mx-auto text-center space-y-4 animate-pulse">
+              <div className="relative">
+                <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
+                <span className="absolute inset-0 flex items-center justify-center text-emerald-300 text-[10px] font-mono font-bold">
+                  RM
+                </span>
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-mono font-semibold tracking-wider text-stone-100 uppercase">
+                  {lang === "en" ? "Atelier Secure Processing" : "অ্যাডমিন প্যানেল প্রসেসিং"}
+                </h4>
+                <p className="text-[10px] font-mono text-emerald-400">
+                  {adminLoadingMessage || (lang === "en" ? "Processing administrative action..." : "অনুরোধটি সম্পন্ন করা হচ্ছে...")}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -114,7 +114,12 @@ export const AtelierQrStickerSpace: React.FC<AtelierQrStickerSpaceProps> = ({ la
       }
     } catch (error) {
       console.error("Download failed, showing fallback image helper", error);
-      const newWindow = window.open();
+      let newWindow: Window | null = null;
+      try {
+        newWindow = window.open();
+      } catch (e) {
+        console.warn("window.open blocked or failed:", e);
+      }
       if (newWindow) {
         newWindow.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#fafafa;"><div style="text-align:center;font-family:sans-serif;"><p style="font-weight:bold;">Right-click or hold the QR image to save:</p><img src="${qrCodeImgUrl}" style="border:1px solid #ccc;border-radius:8px;padding:10px;background:white;width:300px;height:300px;"/></div></div>`);
         newWindow.document.close();

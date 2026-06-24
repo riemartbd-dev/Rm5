@@ -96,6 +96,113 @@
     }
     </script>
 
+    <!-- Prevent iframe / cookie blocking SecurityErrors on storage properties -->
+    <script>
+      (function() {
+        function createMockStorage() {
+          var store = {};
+          return {
+            getItem: function(key) {
+              return store[key] !== undefined ? store[key] : null;
+            },
+            setItem: function(key, value) {
+              store[key] = String(value);
+            },
+            removeItem: function(key) {
+              delete store[key];
+            },
+            clear: function() {
+              store = {};
+            },
+            key: function(index) {
+              var keys = Object.keys(store);
+              return keys[index] || null;
+            },
+            get length() {
+              return Object.keys(store).length;
+            }
+          };
+        }
+
+        function safelyDefineStorage(obj, prop, mockStore) {
+          try {
+            Object.defineProperty(obj, prop, {
+              get: function() { return mockStore; },
+              set: function() {},
+              configurable: true,
+              enumerable: true
+            });
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        var mockLS = createMockStorage();
+        var mockSS = createMockStorage();
+
+        // 1. Check if localStorage works natively
+        var lsWorking = false;
+        try {
+          var testLS = window.localStorage;
+          if (testLS && typeof testLS.getItem === 'function') {
+            testLS.getItem('__test_support__');
+            lsWorking = true;
+          }
+        } catch (e) {
+          lsWorking = false;
+        }
+
+        if (!lsWorking) {
+          console.warn("localStorage security exception or restriction detected. Injecting robust polyfill.");
+          var definedOnProto = false;
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            definedOnProto = safelyDefineStorage(Window.prototype, 'localStorage', mockLS);
+          }
+          if (!definedOnProto) {
+            var definedOnWin = safelyDefineStorage(window, 'localStorage', mockLS);
+            if (!definedOnWin) {
+              try {
+                window.localStorage = mockLS;
+              } catch (err) {
+                console.warn("Could not assign window.localStorage directly:", err);
+              }
+            }
+          }
+        }
+
+        // 2. Check if sessionStorage works natively
+        var ssWorking = false;
+        try {
+          var testSS = window.sessionStorage;
+          if (testSS && typeof testSS.getItem === 'function') {
+            testSS.getItem('__test_support__');
+            ssWorking = true;
+          }
+        } catch (e) {
+          ssWorking = false;
+        }
+
+        if (!ssWorking) {
+          console.warn("sessionStorage security exception or restriction detected. Injecting robust polyfill.");
+          var definedOnProto = false;
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            definedOnProto = safelyDefineStorage(Window.prototype, 'sessionStorage', mockSS);
+          }
+          if (!definedOnProto) {
+            var definedOnWin = safelyDefineStorage(window, 'sessionStorage', mockSS);
+            if (!definedOnWin) {
+              try {
+                window.sessionStorage = mockSS;
+              } catch (err) {
+                console.warn("Could not assign window.sessionStorage directly:", err);
+              }
+            }
+          }
+        }
+      })();
+    </script>
+
     <!-- Premium Google Fonts pairing -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

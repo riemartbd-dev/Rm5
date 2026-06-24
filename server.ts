@@ -17,25 +17,92 @@ const firebaseConfig = JSON.parse(
 );
 
 const DB_PATH = path.join(process.cwd(), "db.json");
+const BAK_PATH = DB_PATH + ".bak";
 
-// Robust JSON file reading / writing
+// Attempt to repair a truncated or malformed JSON string by salvaging completed items
+function tryRepairJson(raw: string): any {
+  try {
+    // Find the last occurrence of "}," which indicates a closed array item
+    let lastCommaIndex = raw.lastIndexOf("},");
+    if (lastCommaIndex === -1) {
+      lastCommaIndex = raw.lastIndexOf("}");
+    }
+    
+    if (lastCommaIndex !== -1) {
+      const parsedPart = raw.substring(0, lastCommaIndex + 1);
+      const closures = ["]}", "}]}", "}"];
+      for (const closure of closures) {
+        try {
+          const repaired = JSON.parse(parsedPart + closure);
+          console.warn(`[JSON Repair] Salvaged truncated db.json successfully using closure: "${closure}"`);
+          return repaired;
+        } catch (e) {
+          // Keep trying other closures
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[JSON Repair] Critical failure in custom repair algorithm:", err);
+  }
+  return null;
+}
+
+// Robust self-healing JSON file reading
 function readDb() {
   try {
     if (fs.existsSync(DB_PATH)) {
       const raw = fs.readFileSync(DB_PATH, "utf8");
-      return JSON.parse(raw);
+      try {
+        const parsed = JSON.parse(raw);
+        // On successful parse, sync/create a healthy backup
+        try {
+          fs.writeFileSync(BAK_PATH, raw, "utf8");
+        } catch (e) {
+          // Non-blocking backup write warning
+        }
+        return parsed;
+      } catch (parseErr: any) {
+        console.error(`[RIEMART DB Coherence] db.json corrupted: ${parseErr.message}. Attempting automated repair...`);
+        
+        // Try custom truncated JSON repair algorithm first
+        const repaired = tryRepairJson(raw);
+        if (repaired) {
+          // Persist repaired state immediately so we heal the file on disk
+          writeDb(repaired);
+          return repaired;
+        }
+        throw parseErr; // fall through to backup restore if custom repair fails
+      }
     }
-  } catch (err) {
-    console.error("Error reading db.json, returning empty database:", err);
+  } catch (err: any) {
+    console.error("[RIEMART DB Coherence] Primary read/repair failed, trying to restore from backup .bak file:", err.message || err);
+    try {
+      if (fs.existsSync(BAK_PATH)) {
+        const rawBak = fs.readFileSync(BAK_PATH, "utf8");
+        const parsedBak = JSON.parse(rawBak);
+        console.log("[RIEMART DB Coherence] Restored database successfully from db.json.bak");
+        // Heal primary file from backup
+        try {
+          fs.writeFileSync(DB_PATH, rawBak, "utf8");
+        } catch (e) {}
+        return parsedBak;
+      }
+    } catch (bakErr: any) {
+      console.error("[RIEMART DB Coherence] Failed to restore from backup file as well:", bakErr.message || bakErr);
+    }
   }
   return {};
 }
 
+// Atomic file writing to completely prevent truncation or incomplete writes during process termination
 function writeDb(data: any) {
   try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf8");
+    const tmpPath = DB_PATH + ".tmp";
+    const serialized = JSON.stringify(data, null, 2);
+    fs.writeFileSync(tmpPath, serialized, "utf8");
+    fs.renameSync(tmpPath, DB_PATH);
   } catch (err) {
-    console.error("Error writing db.json database:", err);
+    console.error("[RIEMART DB Coherence] Error writing db.json database:", err);
   }
 }
 
